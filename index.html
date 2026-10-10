@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VtransAI — Fleet & Transportation Management</title>
+<style>
+:root{
+  --bg:#f5f7fa; --card:#fff; --ink:#111827; --muted:#6b7280; --line:#e5e7eb;
+  --accent:#4338ca; --accent-soft:#eef2ff; --nav:#0f172a;
+  --ok:#15803d; --ok-bg:#dcfce7; --warn:#b45309; --warn-bg:#fef3c7;
+  --bad:#b91c1c; --bad-bg:#fee2e2; --info:#1d4ed8; --info-bg:#dbeafe;
+  --radius:10px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Inter,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);font-size:14px;line-height:1.5}
+button{font-family:inherit;cursor:pointer}
+.hidden{display:none!important}
+
+/* Layout */
+.sidebar{position:fixed;inset:0 auto 0 0;width:224px;background:var(--nav);color:#cbd5e1;display:flex;flex-direction:column;z-index:10}
+.brand{padding:22px 20px;font-size:18px;font-weight:700;color:#fff;letter-spacing:-.01em;border-bottom:1px solid rgba(255,255,255,.08)}
+.brand span{color:#818cf8}
+.nav{padding:14px 10px;display:flex;flex-direction:column;gap:2px}
+.nav button{display:flex;align-items:center;gap:11px;padding:10px 12px;border:0;border-radius:8px;background:none;color:#94a3b8;font-size:13.5px;font-weight:500;text-align:left;width:100%}
+.nav button:hover{background:rgba(255,255,255,.06);color:#e2e8f0}
+.nav button.active{background:rgba(129,140,248,.16);color:#fff}
+.nav svg{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.main{margin-left:224px;padding:28px 32px 56px;max-width:1280px}
+.page-head{margin-bottom:22px}
+.page-head h1{font-size:22px;font-weight:700;letter-spacing:-.01em}
+.page-head p{color:var(--muted);font-size:13px;margin-top:2px}
+.section{display:none;flex-direction:column;gap:18px}
+.section.active{display:flex}
+
+/* Cards */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px}
+.card h3{font-size:14px;font-weight:600;margin-bottom:14px}
+.card-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.card-head h3{margin:0}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.kpi p{font-size:12px;color:var(--muted);font-weight:500}
+.kpi h2{font-size:26px;font-weight:700;margin-top:4px;letter-spacing:-.02em}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:1000px){.kpis{grid-template-columns:1fr 1fr}.two{grid-template-columns:1fr}}
+@media(max-width:760px){.sidebar{width:60px}.brand{font-size:0;padding:18px}.nav span{display:none}.nav button{justify-content:center}.main{margin-left:60px;padding:20px 16px}}
+
+/* Forms */
+.form-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media(max-width:900px){.form-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:560px){.form-grid{grid-template-columns:1fr}}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-size:12px;font-weight:600;color:#374151}
+.field input,.field select{padding:9px 11px;border:1px solid #d1d5db;border-radius:8px;font:inherit;background:#fff;color:var(--ink);outline:none}
+.field input:focus,.field select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(67,56,202,.12)}
+.actions{grid-column:1/-1;display:flex;gap:10px;margin-top:4px}
+.btn{border:1px solid transparent;border-radius:8px;padding:10px 18px;font-size:13.5px;font-weight:600}
+.btn.primary{background:var(--accent);color:#fff}
+.btn.primary:hover{background:#3730a3}
+.btn.ghost{background:#fff;border-color:#d1d5db;color:#374151}
+.btn.ghost:hover{background:#f9fafb}
+
+/* Tables */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;font-size:11.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:12px;border-bottom:1px solid #f3f4f6}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover{background:#fafafa}
+.badge{display:inline-block;font-size:11.5px;font-weight:600;padding:2px 9px;border-radius:999px;background:#f3f4f6;color:#374151}
+.badge.ok{background:var(--ok-bg);color:var(--ok)}
+.badge.warn{background:var(--warn-bg);color:var(--warn)}
+.badge.bad{background:var(--bad-bg);color:var(--bad)}
+.badge.info{background:var(--info-bg);color:var(--info)}
+
+/* Empty state */
+.empty{padding:36px 16px;text-align:center;color:var(--muted);font-size:13px}
+.empty b{display:block;color:#374151;font-size:14px;margin-bottom:3px}
+
+/* Filters */
+.filters{display:flex;gap:8px;flex-wrap:wrap}
+.filters button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 14px;font-size:12.5px;font-weight:600;color:#4b5563}
+.filters button.on{background:var(--accent-soft);border-color:#c7d2fe;color:var(--accent)}
+
+/* Recommendation */
+.rec{display:grid;grid-template-columns:280px 1fr;gap:24px}
+@media(max-width:900px){.rec{grid-template-columns:1fr}}
+.rec-side{border-right:1px solid var(--line);padding-right:24px}
+@media(max-width:900px){.rec-side{border-right:0;padding-right:0}}
+.tag{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--ok);background:var(--ok-bg);padding:3px 10px;border-radius:999px;margin-bottom:10px}
+.rec-side h2{font-size:20px}
+.rec-side .sub{color:var(--muted);font-size:13px;margin-bottom:14px}
+.score{font-size:40px;font-weight:700;color:var(--accent);letter-spacing:-.02em}
+.score small{font-size:14px;color:var(--muted);font-weight:500}
+.kv{margin-top:14px;display:flex;flex-direction:column;gap:8px;font-size:13px}
+.kv div{display:flex;justify-content:space-between;gap:10px}
+.kv span{color:var(--muted)}
+.factor{margin-bottom:12px}
+.factor .row{display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px}
+.bar{height:7px;background:#eef0f3;border-radius:99px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:99px}
+.explain{margin-top:16px;padding:14px 16px;background:#f9fafb;border-left:3px solid var(--accent);border-radius:0 8px 8px 0;font-size:13px;line-height:1.7}
+
+/* Loader */
+.loader{display:flex;align-items:center;gap:14px;justify-content:center;padding:34px;color:var(--muted)}
+.spinner{width:22px;height:22px;border:3px solid #e0e7ff;border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Alerts */
+.alert{display:flex;gap:12px;padding:14px 0;border-bottom:1px solid #f3f4f6}
+.alert:last-child{border-bottom:0}
+.alert h4{font-size:13.5px;font-weight:600}
+.alert p{font-size:12.5px;color:var(--muted)}
+
+#toast{position:fixed;right:22px;bottom:22px;background:var(--ink);color:#fff;padding:11px 16px;border-radius:8px;font-size:13px;opacity:0;transform:translateY(8px);transition:.2s;pointer-events:none}
+#toast.show{opacity:1;transform:none}
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="brand">Vtrans<span>AI</span></div>
+  <nav class="nav" id="nav">
+    <button class="active" data-section="dashboard">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg><span>Dashboard</span></button>
+    <button data-section="new-trip">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg><span>New Trip</span></button>
+    <button data-section="fleet">
+      <svg viewBox="0 0 24 24"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7z"/><circle cx="7" cy="18" r="1.8"/><circle cx="17" cy="18" r="1.8"/></svg><span>Fleet</span></button>
+    <button data-section="trips">
+      <svg viewBox="0 0 24 24"><path d="M5 4h14v16H5zM9 9h6M9 13h6M9 17h3"/></svg><span>Trips</span></button>
+    <button data-section="maintenance">
+      <svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.2-.6-.6-2.2z"/></svg><span>Maintenance</span></button>
+    <button data-section="alerts">
+      <svg viewBox="0 0 24 24"><path d="M6 9a6 6 0 1 1 12 0c0 6 2 7 2 7H4s2-1 2-7zM10 20a2 2 0 0 0 4 0"/></svg><span>Alerts</span></button>
+  </nav>
+</aside>
+
+<main class="main">
+
+  <!-- Dashboard -->
+  <section id="dashboard" class="section active">
+    <div class="page-head"><h1>Dashboard</h1><p>Overview of your fleet and operations.</p></div>
+    <div class="kpis">
+      <div class="card kpi"><p>Total Vehicles</p><h2 id="kTotal">—</h2></div>
+      <div class="card kpi"><p>Available</p><h2 id="kAvail">—</h2></div>
+      <div class="card kpi"><p>Active Trips</p><h2 id="kTrips">—</h2></div>
+      <div class="card kpi"><p>Open Alerts</p><h2 id="kAlerts">—</h2></div>
+    </div>
+    <div class="two">
+      <div class="card"><h3>Recent Trips</h3>
+        <div class="table-wrap"><table><thead><tr><th>Trip</th><th>Route</th><th>Vehicle</th><th>Status</th></tr></thead><tbody id="dashTrips"></tbody></table></div></div>
+      <div class="card"><h3>Recent Alerts</h3><div id="dashAlerts"></div></div>
+    </div>
+  </section>
+
+  <!-- New Trip -->
+  <section id="new-trip" class="section">
+    <div class="page-head"><h1>New Trip</h1><p>Enter delivery details to get an AI vehicle recommendation.</p></div>
+    <div class="card">
+      <form id="tripForm" class="form-grid">
+        <div class="field"><label for="fSource">Source</label><select id="fSource"><option value="">Select city</option></select></div>
+        <div class="field"><label for="fDest">Destination</label><select id="fDest"><option value="">Select city</option></select></div>
+        <div class="field"><label for="fDate">Delivery date</label><input type="date" id="fDate"></div>
+        <div class="field"><label for="fWeight">Cargo weight (kg)</label><input type="number" id="fWeight" min="1" placeholder="e.g. 12000"></div>
+        <div class="field"><label for="fCargo">Cargo type</label>
+          <select id="fCargo"><option value="">Select type</option><option>General Goods</option><option>Fragile</option><option>Perishable</option><option>Refrigerated</option><option>Industrial</option></select></div>
+        <div class="field"><label for="fPriority">Priority</label>
+          <select id="fPriority"><option>Normal</option><option>High</option><option>Express</option><option>Low</option></select></div>
+        <div class="actions">
+          <button type="submit" class="btn primary">Get Recommendation</button>
+          <button type="reset" class="btn ghost">Reset</button>
+        </div>
+      </form>
+    </div>
+
+    <div id="aiLoader" class="card loader hidden"><div class="spinner"></div>Analysing request…</div>
+    <div id="aiResult" class="hidden"></div>
+    <div id="tripEmpty" class="card empty"><b>No recommendation yet</b>Submit the form above to see the recommended vehicle and reasoning.</div>
+  </section>
+
+  <!-- Fleet -->
+  <section id="fleet" class="section">
+    <div class="page-head"><h1>Fleet</h1><p>All registered vehicles.</p></div>
+    <div class="filters" id="fleetFilters">
+      <button class="on" data-filter="All">All</button>
+      <button data-filter="Available">Available</button>
+      <button data-filter="On Trip">On Trip</button>
+      <button data-filter="Maintenance">Maintenance</button>
+    </div>
+    <div class="card"><div class="table-wrap"><table>
+      <thead><tr><th>Registration</th><th>Model</th><th>Type</th><th>Capacity</th><th>Driver</th><th>Health</th><th>Status</th></tr></thead>
+      <tbody id="fleetBody"></tbody></table></div></div>
+  </section>
+
+  <!-- Trips -->
+  <section id="trips" class="section">
+    <div class="page-head"><h1>Trips</h1><p>Scheduled and completed deliveries.</p></div>
+    <div class="card"><div class="table-wrap"><table>
+      <thead><tr><th>Trip ID</th><th>Route</th><th>Vehicle</th><th>Driver</th><th>Date</th><th>Status</th></tr></thead>
+      <tbody id="tripsBody"></tbody></table></div></div>
+  </section>
+
+  <!-- Maintenance -->
+  <section id="maintenance" class="section">
+    <div class="page-head"><h1>Maintenance</h1><p>Predicted issues and vehicle health.</p></div>
+    <div class="card"><div class="table-wrap"><table>
+      <thead><tr><th>Vehicle</th><th>Health</th><th>Risk</th><th>Predicted issue</th><th>Recommended action</th><th>Next service</th></tr></thead>
+      <tbody id="maintBody"></tbody></table></div></div>
+  </section>
+
+  <!-- Alerts -->
+  <section id="alerts" class="section">
+    <div class="page-head"><h1>Alerts</h1><p>Notifications that need attention.</p></div>
+    <div class="card" id="alertsList"></div>
+  </section>
+
+</main>
+<div id="toast"></div>
+
+<script>
+/* =========================================================================
+   BACKEND WIRING
+   Set API_BASE to your API Gateway. Each loader below expects a JSON array
+   (or the object shape noted) and renders it. Field names are listed so you
+   can match them to your DTOs, or edit the column mappers in one place.
+   ========================================================================= */
+const CONFIG = {
+  API_BASE: 'http://localhost:8080/api',
+  ENDPOINTS: {
+    vehicles:       '/fleet/vehicles',          // [{registration, model, type, capacity, driver, health, status}]
+    trips:          '/trips',                   // [{id, source, destination, vehicle, driver, date, status}]
+    maintenance:    '/maintenance/risks',       // [{vehicle, health, risk, predictedIssue, action, nextService}]
+    alerts:         '/alerts',                  // [{severity, title, description, time}]
+    cities:         '/cities',                  // ["Chennai", "Bengaluru", ...]
+    recommendation: '/recommendations/vehicle'  // POST -> see renderRecommendation()
+  }
+};
+
+async function api(path, options){
+  const res = await fetch(CONFIG.API_BASE + path, { headers:{'Content-Type':'application/json'}, ...options });
+  if(!res.ok) throw new Error('API ' + res.status);
+  return res.json();
+}
+
+/* ---------- helpers ---------- */
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const num = n => Number(n).toLocaleString('en-IN');
+let toastTimer;
+function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),3200); }
+function badge(text){
+  const t = String(text||'').toLowerCase();
+  const cls = ['available','delivered','low','ok'].includes(t) ? 'ok'
+    : ['on trip','in transit','scheduled'].includes(t) ? 'info'
+    : ['maintenance','delayed','medium','warning'].includes(t) ? 'warn'
+    : ['critical','high'].includes(t) ? 'bad' : '';
+  return `<span class="badge ${cls}">${esc(text)}</span>`;
+}
+function emptyRow(cols, title, hint){
+  return `<tr><td colspan="${cols}"><div class="empty"><b>${title}</b>${hint||''}</div></td></tr>`;
+}
+function table(tbodyId, rows, cols, rowFn, emptyTitle, emptyHint){
+  $(tbodyId).innerHTML = rows.length ? rows.map(rowFn).join('') : emptyRow(cols, emptyTitle, emptyHint);
+}
+
+/* ---------- navigation ---------- */
+function switchSection(id){
+  document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('active', b.dataset.section===id));
+  document.querySelectorAll('.section').forEach(s=>s.classList.toggle('active', s.id===id));
+  window.scrollTo(0,0);
+}
+document.querySelectorAll('#nav button').forEach(b=>b.addEventListener('click',()=>switchSection(b.dataset.section)));
+
+/* ---------- state ---------- */
+const state = { vehicles:[], trips:[], maintenance:[], alerts:[], filter:'All' };
+
+/* ---------- renderers ---------- */
+const tripRow = t => `<tr><td><b>${esc(t.id)}</b></td><td>${esc(t.source)} → ${esc(t.destination)}</td>
+  <td>${esc(t.vehicle)}</td><td>${esc(t.driver)}</td><td>${esc(t.date)}</td><td>${badge(t.status)}</td></tr>`;
+
+const alertRow = a => `<div class="alert"><div style="flex:1"><h4>${esc(a.title)}</h4>
+  <p>${esc(a.description)}</p></div><div style="text-align:right">${badge(a.severity)}
+  <p style="margin-top:4px">${esc(a.time)}</p></div></div>`;
+
+function renderDashboard(){
+  const v = state.vehicles;
+  $('kTotal').textContent  = v.length || '—';
+  $('kAvail').textContent  = v.length ? v.filter(x=>x.status==='Available').length : '—';
+  $('kTrips').textContent  = state.trips.length ? state.trips.filter(t=>['In Transit','Scheduled'].includes(t.status)).length : '—';
+  $('kAlerts').textContent = state.alerts.length || '—';
+
+  $('dashTrips').innerHTML = state.trips.length
+    ? state.trips.slice(0,5).map(t=>`<tr><td><b>${esc(t.id)}</b></td><td>${esc(t.source)} → ${esc(t.destination)}</td><td>${esc(t.vehicle)}</td><td>${badge(t.status)}</td></tr>`).join('')
+    : emptyRow(4,'No trips','Trips will appear here.');
+  $('dashAlerts').innerHTML = state.alerts.length
+    ? state.alerts.slice(0,4).map(alertRow).join('')
+    : '<div class="empty"><b>No alerts</b>You are all caught up.</div>';
+}
+
+function renderFleet(){
+  const rows = state.vehicles.filter(v => state.filter==='All' || v.status===state.filter);
+  table('fleetBody', rows, 7, v=>`<tr><td><b>${esc(v.registration)}</b></td><td>${esc(v.model)}</td><td>${esc(v.type)}</td>
+    <td>${num(v.capacity)} kg</td><td>${esc(v.driver)}</td><td>${esc(v.health)}</td><td>${badge(v.status)}</td></tr>`,
+    'No vehicles', 'Vehicles from the fleet service will be listed here.');
+}
+document.querySelectorAll('#fleetFilters button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('#fleetFilters button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); state.filter=b.dataset.filter; renderFleet();
+}));
+
+function renderTrips(){ table('tripsBody', state.trips, 6, tripRow, 'No trips', 'Created trips will be listed here.'); }
+
+function renderMaintenance(){
+  table('maintBody', state.maintenance, 6, m=>`<tr><td><b>${esc(m.vehicle)}</b></td><td>${esc(m.health)}</td>
+    <td>${badge(m.risk)}</td><td>${esc(m.predictedIssue)}</td><td>${esc(m.action)}</td><td>${esc(m.nextService)}</td></tr>`,
+    'No maintenance predictions', 'Risk assessments will appear here.');
+}
+
+function renderAlerts(){
+  $('alertsList').innerHTML = state.alerts.length ? state.alerts.map(alertRow).join('')
+    : '<div class="empty"><b>No alerts</b>New notifications will appear here.</div>';
+}
+
+/* ---------- data loading ---------- */
+async function load(key, endpoint){
+  try{ state[key] = await api(endpoint); }catch(e){ state[key] = []; }
+}
+async function loadAll(){
+  await Promise.all([
+    load('vehicles', CONFIG.ENDPOINTS.vehicles), load('trips', CONFIG.ENDPOINTS.trips),
+    load('maintenance', CONFIG.ENDPOINTS.maintenance), load('alerts', CONFIG.ENDPOINTS.alerts)
+  ]);
+  renderDashboard(); renderFleet(); renderTrips(); renderMaintenance(); renderAlerts();
+}
+async function loadCities(){
+  try{
+    const cities = await api(CONFIG.ENDPOINTS.cities);
+    ['fSource','fDest'].forEach(id=>{
+      $(id).insertAdjacentHTML('beforeend', cities.map(c=>`<option>${esc(c)}</option>`).join(''));
+    });
+  }catch(e){ /* leave dropdowns empty until backend is reachable */ }
+}
+
+/* ---------- AI recommendation ----------
+   Expected response from POST /recommendations/vehicle:
+   {
+     vehicle: { id, registration, model, type, capacity, driver, health },
+     score: 87,
+     utilisation: 80,                       // optional, %
+     explanation: "Why this vehicle…",      // text or simple HTML-free string
+     factors: [ { name: "Capacity fit", score: 92 }, ... ],
+     alternatives: [ { registration, type, capacity, score, reason }, ... ]
+   }
+------------------------------------------------------------------------ */
+function renderRecommendation(r, req){
+  const v = r.vehicle || {};
+  const factors = (r.factors||[]).map(f=>`<div class="factor"><div class="row"><span>${esc(f.name)}</span><b>${esc(f.score)}</b></div>
+    <div class="bar"><i style="width:${Math.max(0,Math.min(100,f.score))}%"></i></div></div>`).join('');
+  const alts = (r.alternatives||[]).length
+    ? `<h3 style="margin-top:24px">Alternatives</h3><div class="table-wrap"><table>
+        <thead><tr><th>Vehicle</th><th>Type</th><th>Capacity</th><th>Score</th><th>Note</th></tr></thead><tbody>
+        ${r.alternatives.map(a=>`<tr><td><b>${esc(a.registration)}</b></td><td>${esc(a.type)}</td><td>${num(a.capacity)} kg</td><td>${esc(a.score)}</td><td>${esc(a.reason)}</td></tr>`).join('')}
+        </tbody></table></div>` : '';
+
+  $('aiResult').innerHTML = `<div class="card"><div class="rec">
+    <div class="rec-side">
+      <span class="tag">RECOMMENDED</span>
+      <h2>${esc(v.registration)}</h2>
+      <div class="sub">${esc(v.model)} · ${esc(v.type)}</div>
+      <div class="score">${esc(r.score)}<small> / 100</small></div>
+      <div class="kv">
+        <div><span>Route</span><b>${esc(req.source)} → ${esc(req.dest)}</b></div>
+        <div><span>Capacity</span><b>${num(v.capacity)} kg</b></div>
+        ${r.utilisation!=null?`<div><span>Load utilisation</span><b>${esc(r.utilisation)}%</b></div>`:''}
+        <div><span>Driver</span><b>${esc(v.driver)}</b></div>
+        <div><span>Health</span><b>${esc(v.health)}</b></div>
+      </div>
+    </div>
+    <div>
+      <h3>Score breakdown</h3>${factors || '<div class="empty">No factor data returned.</div>'}
+      ${r.explanation?`<div class="explain">${esc(r.explanation)}</div>`:''}
+    </div>
+  </div>${alts}
+  <div class="actions" style="margin-top:20px">
+    <button class="btn primary" id="assignBtn">Assign &amp; Create Trip</button>
+    <button class="btn ghost" id="rerunBtn">Re-run analysis</button>
+  </div></div>`;
+
+  $('assignBtn').onclick = async ()=>{
+    try{
+      await api(CONFIG.ENDPOINTS.trips, {method:'POST', body:JSON.stringify({...req, vehicleId:v.id})});
+      toast('Trip created'); await loadAll(); switchSection('trips');
+    }catch(e){ toast('Could not create trip'); }
+  };
+  $('rerunBtn').onclick = submitTrip;
+}
+
+function readForm(){
+  return { source:$('fSource').value, dest:$('fDest').value, date:$('fDate').value,
+    weight:+$('fWeight').value, cargo:$('fCargo').value, priority:$('fPriority').value };
+}
+async function submitTrip(){
+  const req = readForm();
+  if(!req.source || !req.dest) return toast('Select source and destination');
+  if(req.source===req.dest)    return toast('Source and destination must differ');
+  if(!req.date)                return toast('Choose a delivery date');
+  if(!(req.weight>0))          return toast('Enter cargo weight');
+  if(!req.cargo)               return toast('Select cargo type');
+
+  $('tripEmpty').classList.add('hidden'); $('aiResult').classList.add('hidden'); $('aiLoader').classList.remove('hidden');
+  try{
+    const data = await api(CONFIG.ENDPOINTS.recommendation, {method:'POST', body:JSON.stringify(req)});
+    renderRecommendation(data, req);
+    $('aiResult').classList.remove('hidden');
+  }catch(e){
+    $('tripEmpty').classList.remove('hidden');
+    toast('Could not get a recommendation. Check the AI service.');
+  }finally{
+    $('aiLoader').classList.add('hidden');
+  }
+}
+$('tripForm').addEventListener('submit', e=>{ e.preventDefault(); submitTrip(); });
+$('tripForm').addEventListener('reset', ()=>{ $('aiResult').classList.add('hidden'); $('tripEmpty').classList.remove('hidden'); });
+
+/* ---------- init ---------- */
+(function init(){
+  const today = new Date().toISOString().slice(0,10);
+  $('fDate').min = today;
+  renderDashboard(); renderFleet(); renderTrips(); renderMaintenance(); renderAlerts();
+  loadCities(); loadAll();
+})();
+</script>
+</body>
+</html>
